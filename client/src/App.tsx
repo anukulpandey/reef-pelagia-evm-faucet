@@ -9,17 +9,10 @@ function App() {
     const t = params.get("token");
     const u = params.get("user");
     if (t) {
-      localStorage.setItem("github_token", t);
-      localStorage.setItem("github_user", u || "");
       setToken(t);
       setUser(u);
       window.history.replaceState({}, document.title, "/");
-    } else {
-      const savedToken = localStorage.getItem("github_token");
-      const savedUser = localStorage.getItem("github_user");
-      if (savedToken) setToken(savedToken);
-      if (savedUser) setUser(savedUser);
-    }
+    } 
   }, []);
 
   const handleLogin = () => {
