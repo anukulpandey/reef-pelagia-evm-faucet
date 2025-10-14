@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import './App.css';
 
 function App() {
   const [token, setToken] = useState<string | null>(null);
@@ -13,7 +14,7 @@ function App() {
       setToken(t);
       setUser(u);
       window.history.replaceState({}, document.title, "/");
-    } 
+    }
   }, []);
 
   const handleLogin = () => {
@@ -49,25 +50,27 @@ function App() {
   };
 
   return (
-    <div style={{ padding: 50, textAlign: "center" }}>
+    <div className="container">
       {!token ? (
-        <>
-          <h2>Login with GitHub</h2>
-          <button onClick={handleLogin}>Login</button>
-        </>
+        <button className="github-button rounded-4xl" onClick={handleLogin}>
+          <img src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/github-white-icon.png" alt="" className="w-8" />
+          Connect
+        </button>
       ) : (
         <>
           <h3>Logged in as {user}</h3>
-          <input
-            type="text"
-            placeholder="Enter your wallet address"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            style={{ marginRight: 10 }}
-          />
-          <button onClick={handleSendTokens}>Send Tokens</button>
-          <br /><br />
-          <button onClick={handleLogout}>Logout</button>
+          <div className="input-container">
+            <input
+              type="text"
+              placeholder="Enter your wallet address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
+            <button onClick={handleSendTokens}>Send Tokens</button>
+          </div>
+          <button className="logout-button" onClick={handleLogout}>
+            Logout
+          </button>
         </>
       )}
     </div>

@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+body {
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+  background-color: #1e1e1e;
+  color: white;
+}
+
+.container {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+.github-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #2d2d2d;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.github-button:hover {
+  background-color: #3a3a3a;
+}
+
+.input-container {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.input-container input {
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #555;
+  background-color: #2d2d2d;
+  color: white;
+  font-size: 16px;
+  outline: none;
+}
+
+.input-container input:focus {
+  border-color: white;
+}
+
+.input-container button {
+  padding: 10px 16px;
+  border-radius: 6px;
+  border: none;
+  background-color: white;
+  color: #1e1e1e;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.input-container button:hover {
+  background-color: #e0e0e0;
+}
+
+.logout-button {
+  margin-top: 20px;
+  background: none;
+  border: none;
+  color: white;
+  text-decoration: underline;
+  cursor: pointer;
+}
