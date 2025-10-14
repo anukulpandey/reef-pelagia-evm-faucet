@@ -117,8 +117,6 @@ The frontend will run on `http://localhost:5173`.
 { "message": "Tokens sent" }
 ```
 
-> Note: Currently the backend just responds with a message. Actual token transfer logic can be added later.
-
 ---
 
 ## **How It Works**
