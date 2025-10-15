@@ -36,6 +36,7 @@ async function initDB() {
     const client = new Client({ ...DB_CONFIG, database: "postgres" });
     await client.connect();
 
+    // Ensure database exists
     const res = await client.query("SELECT 1 FROM pg_database WHERE datname = $1", [DB_NAME]);
     if (res.rowCount === 0) {
       await client.query(`CREATE DATABASE ${DB_NAME}`);
@@ -47,17 +48,31 @@ async function initDB() {
 
     const pool = new Pool({ ...DB_CONFIG, database: DB_NAME });
 
+    // Table for requests
     await pool.query(`
       CREATE TABLE IF NOT EXISTS requests (
         id SERIAL PRIMARY KEY,
         github_username TEXT NOT NULL,
         wallet_address TEXT NOT NULL UNIQUE,
-        token_sent_at TIMESTAMP,
-        nonce BIGINT DEFAULT 0
+        token_sent_at TIMESTAMP
       );
     `);
-    console.log("✅ Table 'requests' is ready.");
 
+    // Table for faucet wallet nonce
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS faucet_nonce (
+        id SERIAL PRIMARY KEY,
+        last_nonce BIGINT DEFAULT 0
+      );
+    `);
+
+    // Ensure at least one row exists in faucet_nonce
+    const nonceRow = await pool.query(`SELECT * FROM faucet_nonce WHERE id = 1`);
+    if (nonceRow.rows.length === 0) {
+      await pool.query(`INSERT INTO faucet_nonce (last_nonce) VALUES (0)`);
+    }
+
+    console.log("✅ Tables are ready.");
     return pool;
   } catch (err) {
     console.error("❌ Database initialization failed:", err);
@@ -118,35 +133,31 @@ app.post("/tokens", async (req, res) => {
     });
     const githubUser = userResponse.data.login;
 
-    // --- Acquire lock for this address ---
-    while (nonceLocks.get(address)) {
-      await new Promise((r) => setTimeout(r, 50)); // wait until lock is released
+    // --- Acquire lock for the faucet wallet ---
+    while (nonceLocks.get("FAUCET")) {
+      await new Promise((r) => setTimeout(r, 50));
     }
-    nonceLocks.set(address, true);
+    nonceLocks.set("FAUCET", true);
 
-    // --- Fetch current nonce ---
-    let { rows } = await pool.query(
-      `SELECT nonce FROM requests WHERE wallet_address = $1`,
-      [address]
+    let nonce;
+    try {
+      // Fetch last used nonce
+      const { rows } = await pool.query(`SELECT last_nonce FROM faucet_nonce WHERE id = 1`);
+      nonce = parseInt(rows[0].last_nonce, 10);
+
+      // Increment nonce in DB
+      await pool.query(`UPDATE faucet_nonce SET last_nonce = $1 WHERE id = 1`, [nonce + 1]);
+    } finally {
+      nonceLocks.delete("FAUCET");
+    }
+
+    // --- Insert request into requests table ---
+    await pool.query(
+      `INSERT INTO requests (github_username, wallet_address, token_sent_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (wallet_address) DO UPDATE SET token_sent_at = NOW()`,
+      [githubUser, address]
     );
-
-    let nonce = 0;
-    if (rows.length > 0) {
-      nonce = parseInt(rows[0].nonce, 10) + 1;
-      await pool.query(
-        `UPDATE requests SET nonce = $1, token_sent_at = NOW() WHERE wallet_address = $2`,
-        [nonce, address]
-      );
-    } else {
-      await pool.query(
-        `INSERT INTO requests (github_username, wallet_address, token_sent_at, nonce)
-         VALUES ($1, $2, NOW(), $3)`,
-        [githubUser, address, nonce]
-      );
-    }
-
-    // --- Release lock ---
-    nonceLocks.delete(address);
 
     const tx = {
       to: address,
@@ -154,21 +165,21 @@ app.post("/tokens", async (req, res) => {
       // nonce,
     };
 
+    console.log("Sending transaction:", tx);
     const sentTx = await wallet.sendTransaction(tx);
     console.log(`✅ TX Hash: ${sentTx.hash}`);
-
     console.log(`💧 Tokens sent for ${githubUser} (${address}) with nonce ${nonce}`);
-
     res.json({
       message: "✅ Tokens sent",
       github_user: githubUser,
       address,
       nonce,
+      txHash: sentTx.hash,
     });
   } catch (err) {
-    nonceLocks.delete(address);
-    console.error("❌ Token request failed:", err.message);
-    res.status(401).send("Invalid GitHub token");
+    nonceLocks.delete("FAUCET");
+    console.error("❌ Token request failed:", err);
+    res.status(500).send("Token request failed");
   }
 });
 
