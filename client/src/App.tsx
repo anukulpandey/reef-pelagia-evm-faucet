@@ -55,10 +55,13 @@ function App() {
       <Header />
       <div className="container">
       {!token ? (
+        <div className="flex flex-col items-center gap-1">
+          <div>Sfsdf</div>
         <button className="github-button rounded-4xl" onClick={handleLogin}>
           <img src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/github-white-icon.png" alt="" className="w-8" />
           Connect
         </button>
+        </div>
       ) : (
         <>
           <h3>Logged in as {user}</h3>
