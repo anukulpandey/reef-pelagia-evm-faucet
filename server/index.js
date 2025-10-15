@@ -3,6 +3,7 @@ const axios = require("axios");
 const cors = require("cors");
 const { Pool, Client } = require("pg");
 require("dotenv").config();
+const { ethers } = require("ethers");
 
 const app = express();
 app.use(cors({ origin: process.env.FRONTEND_URL, credentials: true }));
@@ -14,6 +15,10 @@ const REDIRECT_URI = process.env.GITHUB_REDIRECT_URI;
 const FRONTEND_URL = process.env.FRONTEND_URL;
 const PORT = process.env.PORT || 4000;
 
+// Ethers setup
+const RPC_URL = process.env.RPC_URL;
+const PRIVATE_KEY = process.env.PRIVATE_KEY;
+
 const DB_NAME = "pelagia_faucet_db";
 const DB_CONFIG = {
   user: process.env.DB_USER || "postgres",
@@ -21,6 +26,9 @@ const DB_CONFIG = {
   password: process.env.DB_PASSWORD || "your_password",
   port: process.env.DB_PORT || 5432,
 };
+
+const provider = new ethers.JsonRpcProvider(RPC_URL);
+const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 
 // --- Initialize DB ---
 async function initDB() {
@@ -140,10 +148,19 @@ app.post("/tokens", async (req, res) => {
     // --- Release lock ---
     nonceLocks.delete(address);
 
-    console.log(`💧 Tokens "sent" for ${githubUser} (${address}) with nonce ${nonce}`);
+    const tx = {
+      to: address,
+      value: ethers.parseEther("0.01"),
+      // nonce,
+    };
+
+    const sentTx = await wallet.sendTransaction(tx);
+    console.log(`✅ TX Hash: ${sentTx.hash}`);
+
+    console.log(`💧 Tokens sent for ${githubUser} (${address}) with nonce ${nonce}`);
 
     res.json({
-      message: "✅ Tokens sent (simulated)",
+      message: "✅ Tokens sent",
       github_user: githubUser,
       address,
       nonce,
