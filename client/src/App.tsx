@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import './App.css';
+import Header from "./components/Header/Header";
 
 function App() {
   const [token, setToken] = useState<string | null>(null);
@@ -50,7 +51,9 @@ function App() {
   };
 
   return (
-    <div className="container">
+    <div >
+      <Header />
+      <div className="container">
       {!token ? (
         <button className="github-button rounded-4xl" onClick={handleLogin}>
           <img src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/github-white-icon.png" alt="" className="w-8" />
@@ -73,6 +76,8 @@ function App() {
           </button>
         </>
       )}
+      </div>
+      
     </div>
   );
 }
