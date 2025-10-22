@@ -32,15 +32,15 @@ const Footer: React.FC = () => {
   };
 
   return (
-    <footer className="w-full text-gray-300 flex justify-between items-center px-6 ">
+    <footer className="fixed bottom-0 left-0  backdrop-blur-md text-gray-300 flex space-between items-center px-6 py-3 ">
       <button
         onClick={addPelagiaNetwork}
-        className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg"
+        className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 transition-colors text-white px-4 py-2 rounded-lg"
       >
         <img src={metamaskLogo} alt="MetaMask" className="w-6" />
         Add Pelagia Network
       </button>
-      <p className="text-sm text-gray-500">© {new Date().getFullYear()} Reef Chain</p>
+
     </footer>
   );
 };
