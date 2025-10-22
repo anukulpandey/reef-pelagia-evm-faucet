@@ -183,6 +183,49 @@ app.post("/tokens", async (req, res) => {
   }
 });
 
+app.post("/test-transaction", async (req, res) => {
+  const { address, count } = req.body;
+  if (!address || !count) return res.status(400).send("Address and count required");
+
+  try {
+    let results = [];
+
+    for (let i = 0; i < count; i++) {
+      // Fetch latest nonce from chain
+      const nonce = await provider.getTransactionCount(wallet.address, "latest");
+
+      // Prepare tx
+      const tx = {
+        to: address,
+        value: ethers.parseEther("0.001"), // adjust amount per tx
+        nonce
+      };
+
+      // Send transaction
+      const sentTx = await wallet.sendTransaction(tx);
+      await sentTx.wait(); // wait for confirmation
+
+      // Get updated faucet balance
+      const balance = await provider.getBalance(wallet.address);
+
+      console.log(`TX ${i + 1}/${count}: ${sentTx.hash} | Faucet Balance: ${ethers.formatEther(balance)} REEF`);
+      results.push({
+        txHash: sentTx.hash,
+        faucetBalance: ethers.formatEther(balance),
+      });
+    }
+
+    res.json({
+      message: `✅ Sent ${count} transactions`,
+      results,
+    });
+  } catch (err) {
+    console.error("❌ Test transaction failed:", err);
+    res.status(500).send("Test transaction failed");
+  }
+});
+
+
 // --- Start server ---
 (async () => {
   pool = await initDB();
