@@ -1,78 +1,115 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
 
-body {
+body, html {
   margin: 0;
+  padding: 0;
   font-family: 'Poppins', sans-serif;
-  background-color: #1e1e1e;
-  color: white;
+  height: 100%;
 }
 
-.container {
+.app-grid {
+  display: grid;
+  grid-template-columns: 60% 40%;
   height: 100vh;
+}
+
+.content-side {
   display: flex;
-  justify-content: center;
-  align-items: center;
   flex-direction: column;
+  justify-content: space-between;
+  background: #0a0a0a;
+  color: white;
+  padding: 2rem;
+}
+
+.video-side {
+  position: relative;
+}
+
+.video-container {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.video-bg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.video-overlay {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  color: white;
+  font-size: 1rem;
+}
+
+.login-container, .user-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
 }
 
 .github-button {
+  background: #24292e;
+  color: white;
+  padding: 0.8rem 1.5rem;
+  border: none;
+  border-radius: 10px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  background-color: #2d2d2d;
-  color: white;
-  border: none;
-  padding: 12px 24px;
+  gap: 0.5rem;
   cursor: pointer;
-  font-size: 16px;
   font-weight: 500;
-  transition: background 0.2s;
-}
-
-.github-button:hover {
-  background-color: #3a3a3a;
 }
 
 .input-container {
   display: flex;
-  gap: 10px;
-  margin-top: 20px;
+  gap: 0.5rem;
 }
 
 .input-container input {
-  padding: 10px 12px;
+  padding: 0.6rem;
+  width: 250px;
   border-radius: 6px;
-  border: 1px solid #555;
-  background-color: #2d2d2d;
+  border: 1px solid #333;
+  background: #1a1a1a;
   color: white;
-  font-size: 16px;
-  outline: none;
-}
-
-.input-container input:focus {
-  border-color: white;
-}
-
-.input-container button {
-  padding: 10px 16px;
-  border-radius: 6px;
-  border: none;
-  background-color: white;
-  color: #1e1e1e;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.input-container button:hover {
-  background-color: #e0e0e0;
 }
 
 .logout-button {
-  margin-top: 20px;
-  background: none;
-  border: none;
+  margin-top: 1rem;
+  background: #e63946;
   color: white;
-  text-decoration: underline;
+  padding: 0.6rem 1rem;
+  border: none;
+  border-radius: 8px;
   cursor: pointer;
+}
+
+.footer {
+  padding: 1rem 0;
+  border-top: 1px solid #333;
+}
+
+.add-network-btn {
+  background: #4f46e5;
+  color: white;
+  padding: 0.7rem 1.2rem;
+  border: none;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.metamask-icon {
+  width: 20px;
+  height: 20px;
 }

@@ -1,9 +1,8 @@
+import './App.css';
 import { useEffect, useState } from "react";
-import Header from "./components/Header";
-import MainContent from "./components/MainContent";
-import VideoSection from "./components/VideoSection";
+import Content from "./components/Content";
+import VideoPanel from "./components/VideoPanel";
 import Footer from "./components/Footer";
-import "./App.css"
 
 function App() {
   const [token, setToken] = useState<string | null>(null);
@@ -54,25 +53,22 @@ function App() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-950 text-white">
-      <Header />
-      <div className="flex flex-1">
-        <div className="w-7/10 flex-1 flex justify-center items-center">
-          <MainContent
-            token={token}
-            user={user}
-            address={address}
-            setAddress={setAddress}
-            onLogin={handleLogin}
-            onLogout={handleLogout}
-            onSendTokens={handleSendTokens}
-          />
-        </div>
-        <div className="w-3/10">
-          <VideoSection />
-        </div>
+    <div className="app-grid">
+      <div className="content-side">
+        <Content
+          token={token}
+          user={user}
+          address={address}
+          setAddress={setAddress}
+          onLogin={handleLogin}
+          onLogout={handleLogout}
+          onSend={handleSendTokens}
+        />
+        <Footer />
       </div>
-      <Footer />
+      <div className="video-side">
+        <VideoPanel />
+      </div>
     </div>
   );
 }
