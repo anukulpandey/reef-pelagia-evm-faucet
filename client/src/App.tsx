@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
-import './App.css';
-import Header from "./components/Header/Header";
+import Header from "./components/Header";
+import MainContent from "./components/MainContent";
+import VideoSection from "./components/VideoSection";
+import Footer from "./components/Footer";
+import "./App.css"
 
 function App() {
   const [token, setToken] = useState<string | null>(null);
@@ -51,36 +54,25 @@ function App() {
   };
 
   return (
-    <div >
+    <div className="flex flex-col min-h-screen bg-gray-950 text-white">
       <Header />
-      <div className="container">
-      {!token ? (
-        <div className="flex flex-col items-center gap-1">
-          <div>Sfsdf</div>
-        <button className="github-button rounded-4xl" onClick={handleLogin}>
-          <img src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/github-white-icon.png" alt="" className="w-8" />
-          Connect
-        </button>
+      <div className="flex flex-1">
+        <div className="w-7/10 flex-1 flex justify-center items-center">
+          <MainContent
+            token={token}
+            user={user}
+            address={address}
+            setAddress={setAddress}
+            onLogin={handleLogin}
+            onLogout={handleLogout}
+            onSendTokens={handleSendTokens}
+          />
         </div>
-      ) : (
-        <>
-          <h3>Logged in as {user}</h3>
-          <div className="input-container">
-            <input
-              type="text"
-              placeholder="Enter your wallet address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-            />
-            <button onClick={handleSendTokens}>Send Tokens</button>
-          </div>
-          <button className="logout-button" onClick={handleLogout}>
-            Logout
-          </button>
-        </>
-      )}
+        <div className="w-3/10">
+          <VideoSection />
+        </div>
       </div>
-      
+      <Footer />
     </div>
   );
 }
