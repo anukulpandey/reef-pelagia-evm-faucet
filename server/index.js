@@ -183,36 +183,41 @@ app.post("/tokens", async (req, res) => {
   }
 });
 
+// --- Simple mutex for batch transactions ---
+let batchLock = false;
+
 app.post("/test-transaction", async (req, res) => {
   const { address, count } = req.body;
   if (!address || !count) return res.status(400).send("Address and count required");
 
+  // --- Wait if another batch is running ---
+  while (batchLock) {
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  batchLock = true;
+
   try {
-    let results = [];
+    // Fetch starting nonce and fee data once
+    let nonce = await provider.getTransactionCount(wallet.address, "latest");
+    const feeData = await provider.getFeeData();
+    const results = [];
 
     for (let i = 0; i < count; i++) {
-      // Fetch latest nonce from chain
-      const nonce = await provider.getTransactionCount(wallet.address, "latest");
-
-      // Prepare tx
       const tx = {
         to: address,
-        value: ethers.parseEther("0.001"), // adjust amount per tx
-        nonce
+        value: ethers.parseEther("0.001"),
+        nonce: nonce + i,
+        gasLimit: 21000,
+        gasPrice: feeData.gasPrice,
       };
 
-      // Send transaction
       const sentTx = await wallet.sendTransaction(tx);
       await sentTx.wait(); // wait for confirmation
 
-      // Get updated faucet balance
       const balance = await provider.getBalance(wallet.address);
-
       console.log(`TX ${i + 1}/${count}: ${sentTx.hash} | Faucet Balance: ${ethers.formatEther(balance)} REEF`);
-      results.push({
-        txHash: sentTx.hash,
-        faucetBalance: ethers.formatEther(balance),
-      });
+
+      results.push({ txHash: sentTx.hash, faucetBalance: ethers.formatEther(balance) });
     }
 
     res.json({
@@ -222,6 +227,8 @@ app.post("/test-transaction", async (req, res) => {
   } catch (err) {
     console.error("❌ Test transaction failed:", err);
     res.status(500).send("Test transaction failed");
+  } finally {
+    batchLock = false;
   }
 });
 
