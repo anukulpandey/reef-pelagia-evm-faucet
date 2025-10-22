@@ -1,4 +1,5 @@
 import React from "react";
+import reefLogo from "../assets/reef.svg";
 
 interface Props {
   token: string | null;
@@ -13,6 +14,7 @@ interface Props {
 const Content: React.FC<Props> = ({ token, user, address, setAddress, onLogin, onLogout, onSend }) => {
   return (
     <div className="content">
+        <img src={reefLogo} alt="" />
       {!token ? (
         <div className="login-container">
           <button className="github-button" onClick={onLogin}>
