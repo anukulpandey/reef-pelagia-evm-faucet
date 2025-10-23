@@ -4,6 +4,16 @@ A minimal open-source EVM faucet that allows users to log in via GitHub and requ
 
 ---
 
+<img width="2704" height="1524" alt="image" src="https://github.com/user-attachments/assets/d26fa7ac-569b-49fc-a897-1cf25624885d" />
+
+<img width="2704" height="1526" alt="image" src="https://github.com/user-attachments/assets/0aae4b89-114f-4775-8d5b-b832f4666c70" />
+
+<img width="2704" height="1522" alt="image" src="https://github.com/user-attachments/assets/18811d42-348a-4851-9e4c-61941e7934dd" />
+
+<img width="2000" height="1238" alt="image" src="https://github.com/user-attachments/assets/c746555e-42c1-4bf9-97ff-2d3a8dd6076f" />
+
+<img width="2704" height="1598" alt="image" src="https://github.com/user-attachments/assets/c1f92592-cd99-4c3e-a0e9-c161e9e9cbbc" />
+
 ## **Features**
 
 * Login with GitHub OAuth
