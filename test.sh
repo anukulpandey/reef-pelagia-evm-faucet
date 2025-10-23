@@ -5,7 +5,6 @@
 # =========================================
 URL="http://localhost:4000/test-transaction"   # Change to your actual API endpoint
 ADDRESS="0x7b6ed12821B52f41e3117Cc95A336E9649ACA7f7"  # Replace with target address
-COUNT=1        # Number of transactions per request (your backend loops inside)
 TOTAL_REQUESTS=50   # Number of concurrent curl requests
 
 # =========================================
@@ -18,8 +17,7 @@ send_request() {
   curl -s -X POST "$URL" \
     -H "Content-Type: application/json" \
     -d '{
-      "address": "'"$ADDRESS"'",
-      "count": '"$COUNT"'
+      "address": "'"$ADDRESS"'"
     }' > /dev/null &   # Send in background for concurrency
 }
 

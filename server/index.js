@@ -9,13 +9,15 @@ const app = express();
 app.use(cors({ origin: process.env.FRONTEND_URL, credentials: true }));
 app.use(express.json());
 
+// ======================
+// ⚙️ CONFIG
+// ======================
 const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
 const REDIRECT_URI = process.env.GITHUB_REDIRECT_URI;
 const FRONTEND_URL = process.env.FRONTEND_URL;
 const PORT = process.env.PORT || 4000;
 
-// Ethers setup
 const RPC_URL = process.env.RPC_URL;
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 
@@ -30,7 +32,9 @@ const DB_CONFIG = {
 const provider = new ethers.JsonRpcProvider(RPC_URL);
 const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 
-// --- Initialize DB ---
+// ======================
+// 🗄️ Initialize Database
+// ======================
 async function initDB() {
   try {
     const client = new Client({ ...DB_CONFIG, database: "postgres" });
@@ -76,7 +80,9 @@ async function initDB() {
   }
 }
 
-// --- GitHub OAuth ---
+// ======================
+// 🔐 GitHub OAuth
+// ======================
 app.get("/auth/github", (req, res) => {
   const redirectUrl = `https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&scope=read:user`;
   res.redirect(redirectUrl);
@@ -94,20 +100,17 @@ app.get("/auth/github/callback", async (req, res) => {
     );
 
     const accessToken = tokenResponse.data.access_token;
-
     const userResponse = await axios.get("https://api.github.com/user", {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-
     const githubUser = userResponse.data;
 
     res.redirect(`${FRONTEND_URL}?token=${accessToken}&user=${githubUser.login}`);
   } catch (err) {
-    console.error(err);
+    console.error("❌ OAuth failed:", err.message);
     res.status(500).send("OAuth failed");
   }
 });
-
 
 // ======================
 // 🧠 Global TX Queue System
@@ -131,11 +134,12 @@ async function processQueue() {
     } catch (err) {
       console.error("❌ Transaction in queue failed:", err.message);
     }
+
+    await new Promise((r) => setTimeout(r, 1000));
   }
 
   processingTx = false;
 }
-
 
 // ======================
 // 🚰 Protected Faucet Route
@@ -164,7 +168,7 @@ app.post("/tokens", async (req, res) => {
       [githubUser, address]
     );
 
-    // Queue transaction instead of sending immediately
+    // Queue transaction safely
     await enqueueTransaction(async () => {
       console.log(`🚀 Processing TX for ${githubUser} (${address})`);
 
@@ -181,63 +185,50 @@ app.post("/tokens", async (req, res) => {
 
     res.json({ message: "⏳ Your transaction is queued and will be processed soon." });
   } catch (err) {
-    console.error("❌ Token request failed:", err);
+    console.error("❌ Token request failed:", err.message);
     res.status(500).send("Token request failed");
   }
 });
 
-
 // ======================
-// 🧪 Test Transaction Route (sequential)
+// 🧪 Test Transaction Route (like /tokens)
 // ======================
 app.post("/test-transaction", async (req, res) => {
-  const { address, count } = req.body;
+  const { address } = req.body;
 
-  if (!address || !count || count <= 0) {
-    return res.status(400).json({ error: "Invalid address or count" });
+  if (!address) {
+    return res.status(400).send("No address provided");
   }
 
-  console.log(`🚀 Received request for ${count} test transactions to ${address}`);
+  console.log(`🚀 Received request to send test tokens to ${address}`);
 
-  // Queue the batch as one job
-  await enqueueTransaction(async () => {
-    console.log(`🧾 Starting sequential ${count} TXs to ${address}`);
-    const summary = [];
+  try {
+    // Queue the transaction
+    await enqueueTransaction(async () => {
+      console.log(`🚀 Processing test TX to ${address}`);
 
-    for (let i = 0; i < count; i++) {
-      try {
-        const tx = {
-          to: address,
-          value: ethers.parseEther("0.001"),
-        };
+      const tx = {
+        to: address,
+        value: ethers.parseEther("0.001"), // test token amount
+      };
 
-        const sentTx = await wallet.sendTransaction(tx);
-        console.log(`✅ [${i + 1}/${count}] TX Hash: ${sentTx.hash}`);
-        await sentTx.wait();
+      const sentTx = await wallet.sendTransaction(tx);
+      console.log(`✅ TX Hash: ${sentTx.hash}`);
+      await sentTx.wait();
+      console.log(`💧 Test tokens delivered to ${address}`);
+    });
 
-        summary.push({ success: true, hash: sentTx.hash });
-      } catch (err) {
-        console.error(`❌ TX ${i + 1} failed:`, err.message);
-        summary.push({ success: false, error: err.message });
-      }
-    }
-
-    const finalBalance = await provider.getBalance(wallet.address);
-    console.log(`💰 Faucet balance: ${ethers.formatEther(finalBalance)} ETH`);
-
-    console.log(`✅ Finished ${count} TXs for ${address}`);
-  });
-
-  res.json({
-    message: `⏳ ${count} transactions queued and will be processed sequentially.`,
-  });
+    res.json({ message: "⏳ Your test transaction is queued and will be processed soon." });
+  } catch (err) {
+    console.error("❌ Test transaction failed:", err.message);
+    res.status(500).send("Test transaction failed");
+  }
 });
 
-
-// --- Start server ---
+// ======================
+// 🚀 Start Server
+// ======================
 (async () => {
   pool = await initDB();
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-  });
+  app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 })();
