@@ -140,7 +140,6 @@ async function processQueue() {
 
   processingTx = false;
 }
-
 // ======================
 // 🚰 Protected Faucet Route
 // ======================
@@ -156,17 +155,31 @@ app.post("/tokens", async (req, res) => {
   if (!address) return res.status(400).send("No address provided");
 
   try {
+    // Get GitHub user info
     const userResponse = await axios.get("https://api.github.com/user", {
       headers: { Authorization: `Bearer ${token}` },
     });
     const githubUser = userResponse.data.login;
 
-    await pool.query(
-      `INSERT INTO requests (github_username, wallet_address, token_sent_at)
-       VALUES ($1, $2, NOW())
-       ON CONFLICT (wallet_address) DO UPDATE SET token_sent_at = NOW()`,
-      [githubUser, address]
+    // Check last request time
+    const lastRequestRes = await pool.query(
+      `SELECT token_sent_at FROM requests WHERE wallet_address = $1`,
+      [address]
     );
+
+    const now = new Date();
+
+    console.log("lastRequest at ",lastRequestRes);
+    
+    if (lastRequestRes.rows.length > 0) {
+      const lastSent = lastRequestRes.rows[0].token_sent_at;
+      const hoursDiff = (now - new Date(lastSent)) / 1000 / 60 / 60;
+      if (hoursDiff < 24) {
+        return res
+          .status(429)
+          .json({ message: "⏳ Tokens were already requested in the last 24 hours." });
+      }
+    }
 
     // Queue transaction safely
     await enqueueTransaction(async () => {
@@ -181,6 +194,14 @@ app.post("/tokens", async (req, res) => {
       console.log(`✅ TX Hash: ${sentTx.hash}`);
       await sentTx.wait();
       console.log(`💧 Tokens delivered to ${address}`);
+
+      // Update DB timestamp AFTER successful transaction
+      await pool.query(
+        `INSERT INTO requests (github_username, wallet_address, token_sent_at)
+         VALUES ($1, $2, NOW())
+         ON CONFLICT (wallet_address) DO UPDATE SET token_sent_at = NOW()`,
+        [githubUser, address]
+      );
     });
 
     res.json({ message: "⏳ Your transaction is queued and will be processed soon." });
