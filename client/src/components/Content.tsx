@@ -1,4 +1,5 @@
 import React from "react";
+import ConnectGithub from "./Buttons/ConnectGithub";
 
 interface Props {
   token: string | null;
@@ -19,17 +20,7 @@ const Content: React.FC<Props> = ({ token, user, address, setAddress, onLogin, o
           <p className="text-white text-lg">
             Claim your free REEF tokens instantly. Connect your GitHub account to get started.
           </p>
-          <button
-            className="flex items-center justify-center gap-3 bg-black hover:bg-gray-800 text-white px-6 py-3 rounded-lg w-full max-w-md font-semibold text-lg shadow-md hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-            onClick={onLogin}
-          >
-            <img
-              src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/github-white-icon.png"
-              alt="GitHub"
-              className="w-6"
-            />
-            Connect with GitHub
-          </button>
+         <ConnectGithub onLogin={onLogin}/>
         </div>
       ) : (
         <div className="flex flex-col items-center gap-6 max-w-lg w-full text-center">
