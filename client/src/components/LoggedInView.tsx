@@ -24,11 +24,11 @@ function LoggedInView({user,address,setAddress,onSend,onLogout}:Props) {
               placeholder="Enter your wallet address"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg text-white border border-gray-400 bg-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-500 text-lg"
+              className="w-full px-4 py-3 rounded-lg text-white   bg-black focus:outline-none focus:ring-1 focus:ring-gray-500 text-lg"
             />
             <button
               onClick={onSend}
-              className="w-full bg-black hover:bg-gray-800 text-white px-4 py-3 rounded-lg text-lg font-semibold shadow-md hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+              className="w-full bg-black hover:bg-white hover:text-black text-white px-4 py-3 rounded-lg text-lg font-semibold shadow-md hover:shadow-xl transform hover:scale-105 transition-all duration-300"
             >
               Send Tokens
             </button>

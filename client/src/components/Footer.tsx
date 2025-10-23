@@ -11,15 +11,15 @@ const Footer: React.FC = () => {
         method: "wallet_addEthereumChain",
         params: [
           {
-            chainId: "0x1AEF",
-            chainName: "Pelagia Network",
+            chainId: "0x3673",
+            chainName: "Reef Pelagia Network",
             nativeCurrency: {
               name: "REEF",
               symbol: "REEF",
               decimals: 18,
             },
-            rpcUrls: ["https://rpc.pelagia.network"],
-            blockExplorerUrls: ["https://explorer.pelagia.network"],
+            rpcUrls: ["http://34.123.142.246:8545"],
+            blockExplorerUrls: [],
           },
         ],
       });
