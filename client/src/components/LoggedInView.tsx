@@ -15,8 +15,9 @@ function LoggedInView({user,address,setAddress,onSend,onLogout}:Props) {
           <h1 className="text-4xl font-bold text-white">
             Pelagia Network Faucet
           </h1>
-          <p className="text-white text-lg">
-            Logged in as <span className="font-semibold">{user}</span>. Enter your wallet address below to claim your tokens.
+          <p className="text-white opacity-70 text-lg">
+            Logged in as <span className="font-semibold">{user}</span>.<br/>
+            Enter your wallet address below to claim your tokens.
           </p>
 
           <div className="flex flex-col gap-4 w-full max-w-md">
@@ -35,7 +36,7 @@ function LoggedInView({user,address,setAddress,onSend,onLogout}:Props) {
             </button>
           </div>
 
-          <p className="text-gray-400 text-sm">
+          <p className="text-white opacity-40 text-sm">
             Each wallet can claim once every 24 hours. Make sure you are on the correct network.
           </p>
 
