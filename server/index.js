@@ -36,7 +36,6 @@ async function initDB() {
     const client = new Client({ ...DB_CONFIG, database: "postgres" });
     await client.connect();
 
-    // Ensure database exists
     const res = await client.query("SELECT 1 FROM pg_database WHERE datname = $1", [DB_NAME]);
     if (res.rowCount === 0) {
       await client.query(`CREATE DATABASE ${DB_NAME}`);
@@ -48,7 +47,6 @@ async function initDB() {
 
     const pool = new Pool({ ...DB_CONFIG, database: DB_NAME });
 
-    // Table for requests
     await pool.query(`
       CREATE TABLE IF NOT EXISTS requests (
         id SERIAL PRIMARY KEY,
@@ -58,7 +56,6 @@ async function initDB() {
       );
     `);
 
-    // Table for faucet wallet nonce
     await pool.query(`
       CREATE TABLE IF NOT EXISTS faucet_nonce (
         id SERIAL PRIMARY KEY,
@@ -66,7 +63,6 @@ async function initDB() {
       );
     `);
 
-    // Ensure at least one row exists in faucet_nonce
     const nonceRow = await pool.query(`SELECT * FROM faucet_nonce WHERE id = 1`);
     if (nonceRow.rows.length === 0) {
       await pool.query(`INSERT INTO faucet_nonce (last_nonce) VALUES (0)`);
@@ -112,10 +108,38 @@ app.get("/auth/github/callback", async (req, res) => {
   }
 });
 
-// --- Mutex map for nonce handling ---
-const nonceLocks = new Map();
 
-// --- Protected Faucet Route ---
+// ======================
+// 🧠 Global TX Queue System
+// ======================
+const txQueue = [];
+let processingTx = false;
+
+async function enqueueTransaction(taskFn) {
+  txQueue.push(taskFn);
+  processQueue();
+}
+
+async function processQueue() {
+  if (processingTx) return;
+  processingTx = true;
+
+  while (txQueue.length > 0) {
+    const nextTx = txQueue.shift();
+    try {
+      await nextTx();
+    } catch (err) {
+      console.error("❌ Transaction in queue failed:", err.message);
+    }
+  }
+
+  processingTx = false;
+}
+
+
+// ======================
+// 🚰 Protected Faucet Route
+// ======================
 let pool;
 app.post("/tokens", async (req, res) => {
   const authHeader = req.headers.authorization;
@@ -133,25 +157,6 @@ app.post("/tokens", async (req, res) => {
     });
     const githubUser = userResponse.data.login;
 
-    // --- Acquire lock for the faucet wallet ---
-    while (nonceLocks.get("FAUCET")) {
-      await new Promise((r) => setTimeout(r, 50));
-    }
-    nonceLocks.set("FAUCET", true);
-
-    let nonce;
-    try {
-      // Fetch last used nonce
-      const { rows } = await pool.query(`SELECT last_nonce FROM faucet_nonce WHERE id = 1`);
-      nonce = parseInt(rows[0].last_nonce, 10);
-
-      // Increment nonce in DB
-      await pool.query(`UPDATE faucet_nonce SET last_nonce = $1 WHERE id = 1`, [nonce + 1]);
-    } finally {
-      nonceLocks.delete("FAUCET");
-    }
-
-    // --- Insert request into requests table ---
     await pool.query(
       `INSERT INTO requests (github_username, wallet_address, token_sent_at)
        VALUES ($1, $2, NOW())
@@ -159,31 +164,32 @@ app.post("/tokens", async (req, res) => {
       [githubUser, address]
     );
 
-    const tx = {
-      to: address,
-      value: ethers.parseEther("0.01"),
-      // nonce,
-    };
+    // Queue transaction instead of sending immediately
+    await enqueueTransaction(async () => {
+      console.log(`🚀 Processing TX for ${githubUser} (${address})`);
 
-    console.log("Sending transaction:", tx);
-    const sentTx = await wallet.sendTransaction(tx);
-    console.log(`✅ TX Hash: ${sentTx.hash}`);
-    console.log(`💧 Tokens sent for ${githubUser} (${address}) with nonce ${nonce}`);
-    res.json({
-      message: "✅ Tokens sent",
-      github_user: githubUser,
-      address,
-      nonce,
-      txHash: sentTx.hash,
+      const tx = {
+        to: address,
+        value: ethers.parseEther("0.01"),
+      };
+
+      const sentTx = await wallet.sendTransaction(tx);
+      console.log(`✅ TX Hash: ${sentTx.hash}`);
+      await sentTx.wait();
+      console.log(`💧 Tokens delivered to ${address}`);
     });
+
+    res.json({ message: "⏳ Your transaction is queued and will be processed soon." });
   } catch (err) {
-    nonceLocks.delete("FAUCET");
     console.error("❌ Token request failed:", err);
     res.status(500).send("Token request failed");
   }
 });
 
-// --- Test Transaction Route ---
+
+// ======================
+// 🧪 Test Transaction Route (sequential)
+// ======================
 app.post("/test-transaction", async (req, res) => {
   const { address, count } = req.body;
 
@@ -191,94 +197,40 @@ app.post("/test-transaction", async (req, res) => {
     return res.status(400).json({ error: "Invalid address or count" });
   }
 
-  try {
-    console.log(`🚀 Initiating ${count} test transactions to ${address}`);
+  console.log(`🚀 Received request for ${count} test transactions to ${address}`);
 
-    // Lock nonce management
-    while (nonceLocks.get("FAUCET")) {
-      await new Promise((r) => setTimeout(r, 50));
-    }
-    nonceLocks.set("FAUCET", true);
+  // Queue the batch as one job
+  await enqueueTransaction(async () => {
+    console.log(`🧾 Starting sequential ${count} TXs to ${address}`);
+    const summary = [];
 
-    // Get last nonce from DB
-    let { rows } = await pool.query(`SELECT last_nonce FROM faucet_nonce WHERE id = 1`);
-    let currentNonce = parseInt(rows[0].last_nonce, 10);
-
-    // Also get on-chain nonce to sync if necessary
-    const onChainNonce = await provider.getTransactionCount(wallet.address, "pending");
-    if (onChainNonce > currentNonce) {
-      console.log(`🔄 Syncing local nonce (${currentNonce}) with chain nonce (${onChainNonce})`);
-      currentNonce = onChainNonce;
-      await pool.query(`UPDATE faucet_nonce SET last_nonce = $1 WHERE id = 1`, [currentNonce]);
-    }
-
-    // Reserve nonces for all upcoming txs in DB
-    const nonces = Array.from({ length: count }, (_, i) => currentNonce + i);
-    const nextNonce = currentNonce + count;
-    await pool.query(`UPDATE faucet_nonce SET last_nonce = $1 WHERE id = 1`, [nextNonce]);
-    nonceLocks.delete("FAUCET");
-
-    // --- Create all transaction promises concurrently ---
-    const txPromises = nonces.map(async (nonce, i) => {
+    for (let i = 0; i < count; i++) {
       try {
         const tx = {
           to: address,
-          value: ethers.parseEther("0.001"), // small test amount
-          nonce,
+          value: ethers.parseEther("0.001"),
         };
 
         const sentTx = await wallet.sendTransaction(tx);
-        console.log(`✅ [${i + 1}/${count}] TX sent: ${sentTx.hash} (nonce: ${nonce})`);
+        console.log(`✅ [${i + 1}/${count}] TX Hash: ${sentTx.hash}`);
         await sentTx.wait();
-        return { success: true, nonce, hash: sentTx.hash };
+
+        summary.push({ success: true, hash: sentTx.hash });
       } catch (err) {
-        console.error(`❌ TX ${i + 1} failed (nonce: ${nonce}):`, err.message);
-
-        // If it's a nonce or replacement issue, retry with updated nonce
-        if (err.message.includes("nonce") || err.message.includes("replacement")) {
-          const chainNonce = await provider.getTransactionCount(wallet.address, "pending");
-          console.log(`🔁 Retrying TX ${i + 1} with new nonce: ${chainNonce}`);
-
-          const retryTx = {
-            to: address,
-            value: ethers.parseEther("0.001"),
-            nonce: chainNonce,
-          };
-
-          try {
-            const retried = await wallet.sendTransaction(retryTx);
-            console.log(`✅ Retried TX hash: ${retried.hash}`);
-            return { success: true, nonce: chainNonce, hash: retried.hash };
-          } catch (retryErr) {
-            console.error(`🚫 Retry failed: ${retryErr.message}`);
-            return { success: false, nonce, error: retryErr.message };
-          }
-        }
-
-        return { success: false, nonce, error: err.message };
+        console.error(`❌ TX ${i + 1} failed:`, err.message);
+        summary.push({ success: false, error: err.message });
       }
-    });
-
-    // Wait for all TXs to complete
-    const results = await Promise.allSettled(txPromises);
-
-    const summary = results.map((r) =>
-      r.status === "fulfilled" ? r.value : { success: false, error: r.reason?.message || "unknown" }
-    );
+    }
 
     const finalBalance = await provider.getBalance(wallet.address);
-    console.log(`💰 Faucet balance after all TXs: ${ethers.formatEther(finalBalance)} ETH`);
+    console.log(`💰 Faucet balance: ${ethers.formatEther(finalBalance)} ETH`);
 
+    console.log(`✅ Finished ${count} TXs for ${address}`);
+  });
 
-    res.json({
-      message: `Processed ${count} test transactions`,
-      summary,
-    });
-  } catch (err) {
-    nonceLocks.delete("FAUCET");
-    console.error("❌ Test transaction error:", err);
-    res.status(500).json({ error: "Internal Server Error", details: err.message });
-  }
+  res.json({
+    message: `⏳ ${count} transactions queued and will be processed sequentially.`,
+  });
 });
 
 
