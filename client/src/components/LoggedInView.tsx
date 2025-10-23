@@ -1,4 +1,5 @@
 import React from 'react'
+import Logout from './Buttons/Logout';
 
 interface Props{
     user:string;
@@ -38,12 +39,7 @@ function LoggedInView({user,address,setAddress,onSend,onLogout}:Props) {
             Each wallet can claim once every 24 hours. Make sure you are on the correct network.
           </p>
 
-          <button
-            className="w-full max-w-md bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg text-lg font-semibold shadow-md hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-            onClick={onLogout}
-          >
-            Logout
-          </button>
+          <Logout onLogout={onLogout}/>
         </div>
   )
 }
